@@ -12,7 +12,7 @@ Agent 评估与可观测性平台。兼容 LangFuse 协议，提供 SDK + LangCh
 | API 规范 | [docs/api_spec.md](docs/api_spec.md) | 全部 API 接口定义 |
 | 前端设计 | [docs/frontend_design.md](docs/frontend_design.md) | 页面路由、组件树、色彩规范 |
 | 执行步骤 | [docs/execution_plan.md](docs/execution_plan.md) | Phase 1-6 步骤清单 |
-| 开发计划 | [plan file](C:\Users\molin\.claude\plans\floating-greeting-dove.md) | 详细实施计划 |
+| 开发计划 | [docs/execution_plan.md](docs/execution_plan.md) | 详细实施步骤 |
 
 ## 技术栈
 

@@ -2,7 +2,7 @@
 
 ## 总体迭代
 
-参见项目根目录 CLAUDE.md 和 [开发计划](C:\Users\molin\.claude\plans\floating-greeting-dove.md)
+参见项目根目录 [CLAUDE.md](../CLAUDE.md) 和各 Phase 步骤清单
 
 ### Phase 1：项目基础 ✅
 - [x] 1.1 目录结构
