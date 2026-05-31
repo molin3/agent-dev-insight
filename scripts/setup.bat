@@ -2,191 +2,177 @@
 setlocal EnableDelayedExpansion
 
 :: ============================================================
-::  AgentDevInsight Setup Script
-::  Usage: Double-click scripts\setup.bat
+::  AgentDevInsight Setup
+::  Right-click this file -> Run as administrator (if needed)
 :: ============================================================
 
-:: Resolve absolute paths (never change these)
-set "SCRIPT_DIR=%~dp0"
-set "PROJECT_DIR=%SCRIPT_DIR%.."
-set "BACKEND_DIR=%PROJECT_DIR%\backend"
-set "FRONTEND_DIR=%PROJECT_DIR%\frontend"
+:: Get this script's directory, then project root (parent)
+set "SELF=%~dp0"
+:: Remove trailing backslash from SELF
+set "SELF=%SELF:~0,-1%"
+:: Get parent directory
+for %%I in ("%SELF%") do set "PROJECT=%%~dpI"
+:: Remove trailing backslash
+set "PROJECT=%PROJECT:~0,-1%"
 
+set "BACKEND=%PROJECT%\backend"
+set "FRONTEND=%PROJECT%\frontend"
+
+echo.
 echo ========================================
 echo  AgentDevInsight Setup
 echo ========================================
-echo  Project: %PROJECT_DIR%
+echo.
+echo  Script dir:  %SELF%
+echo  Project root: %PROJECT%
+echo  Backend:      %BACKEND%
+echo  Frontend:     %FRONTEND%
 echo.
 
-:: ---- Step 0: Check prerequisites ----
+:: ---- Check Python ----
+set "PYCMD="
+where python >nul 2>&1 && set "PYCMD=python"
+if not defined PYCMD where python3 >nul 2>&1 && set "PYCMD=python3"
+if not defined PYCMD where py >nul 2>&1 && set "PYCMD=py -3"
 
-:: Find Python executable
-set "PYTHON_CMD="
-python --version >nul 2>&1
-if not errorlevel 1 (
-    set "PYTHON_CMD=python"
-    goto :python_found
-)
-python3 --version >nul 2>&1
-if not errorlevel 1 (
-    set "PYTHON_CMD=python3"
-    goto :python_found
-)
-py -3 --version >nul 2>&1
-if not errorlevel 1 (
-    set "PYTHON_CMD=py -3"
-    goto :python_found
-)
-
-echo [ERROR] Python not found!
-echo.
-echo Please install Python 3.11+ from: https://www.python.org/downloads/
-echo IMPORTANT: Check "Add Python to PATH" during installation.
-echo.
-pause
-exit /b 1
-
-:python_found
-
-node --version >nul 2>&1
-if errorlevel 1 (
-    echo [ERROR] Node.js not found!
-    echo.
-    echo Please install Node.js 18+ from: https://nodejs.org/
-    echo.
+if not defined PYCMD (
+    echo [ERROR] Python not found. Install Python 3.11+ and add to PATH.
+    echo https://www.python.org/downloads/
     pause
     exit /b 1
 )
 
-echo [0/3] Prerequisites OK
-%PYTHON_CMD% --version
+:: ---- Check Node ----
+where node >nul 2>&1
+if errorlevel 1 (
+    echo [ERROR] Node.js not found. Install Node.js 18+.
+    echo https://nodejs.org/
+    pause
+    exit /b 1
+)
+
+echo [STEP 0/3] Prerequisites
+%PYCMD% --version
 node --version
 npm --version
 echo.
 
-:: ---- Step 1: Backend ----
-echo [1/3] Setting up backend...
+:: ============================================================
+::  STEP 1: Backend
+:: ============================================================
+echo [STEP 1/3] Backend setup
+echo.
 
-:: Verify backend directory exists
-if not exist "%BACKEND_DIR%\requirements.txt" (
-    echo [ERROR] Backend directory not found or incomplete:
-    echo   Expected: %BACKEND_DIR%\requirements.txt
-    echo.
+:: Verify backend dir
+if not exist "%BACKEND%\requirements.txt" (
+    echo [ERROR] Cannot find: %BACKEND%\requirements.txt
+    echo Make sure you are in the correct project directory.
     pause
     exit /b 1
 )
 
-:: Handle incomplete venv: delete and recreate
-if exist "%BACKEND_DIR%\venv" (
-    if exist "%BACKEND_DIR%\venv\Scripts\python.exe" (
-        echo   Virtual environment exists, skipping creation.
-        goto :venv_ready
+:: Remove incomplete venv if exists
+if exist "%BACKEND%\venv" (
+    if exist "%BACKEND%\venv\Scripts\python.exe" (
+        echo   venv already exists - skipping creation.
+        goto :install_deps
     ) else (
-        echo   Found incomplete venv, removing and recreating...
-        rmdir /s /q "%BACKEND_DIR%\venv"
+        echo   Found incomplete venv - removing...
+        rmdir /s /q "%BACKEND%\venv"
     )
 )
 
+:: Create venv
 echo   Creating virtual environment...
-pushd "%BACKEND_DIR%"
-%PYTHON_CMD% -m venv venv
-set "VENV_RESULT=%errorlevel%"
-popd
-
-if not %VENV_RESULT%==0 (
-    echo [ERROR] Failed to create virtual environment.
-    echo Try running manually: %PYTHON_CMD% -m venv venv
+%PYCMD% -m venv "%BACKEND%\venv"
+if not exist "%BACKEND%\venv\Scripts\python.exe" (
+    echo [ERROR] venv creation failed.
+    echo Try: %PYCMD% -m venv "%BACKEND%\venv"
     pause
     exit /b 1
 )
+echo   venv created successfully.
 
-:: Verify creation succeeded
-if not exist "%BACKEND_DIR%\venv\Scripts\python.exe" (
-    echo [ERROR] venv creation reported success but python.exe not found.
-    echo Please delete %BACKEND_DIR%\venv and try again.
-    pause
-    exit /b 1
-)
-echo   Virtual environment created.
-
-:venv_ready
-
-:: Install Python dependencies (use absolute paths, never rely on cd)
-echo   Installing Python dependencies...
-call "%BACKEND_DIR%\venv\Scripts\activate.bat"
-pip install -r "%BACKEND_DIR%\requirements.txt"
+:install_deps
+echo   Installing Python packages (may take a few minutes)...
+call "%BACKEND%\venv\Scripts\activate.bat"
+pip install --disable-pip-version-check -r "%BACKEND%\requirements.txt"
 if errorlevel 1 (
-    echo [ERROR] pip install failed. Check your internet connection.
+    echo [ERROR] pip install failed. Check internet connection.
     pause
     exit /b 1
 )
-echo   Python dependencies installed.
+echo   Python packages installed.
 
-:: Copy .env template
-if not exist "%BACKEND_DIR%\.env" (
-    if exist "%PROJECT_DIR%\.env.example" (
-        copy "%PROJECT_DIR%\.env.example" "%BACKEND_DIR%\.env" >nul
+:: Copy .env if needed
+if not exist "%BACKEND%\.env" (
+    if exist "%PROJECT%\.env.example" (
+        copy "%PROJECT%\.env.example" "%BACKEND%\.env" >nul
         echo   Created backend\.env from template.
     )
 ) else (
     echo   backend\.env already exists.
 )
-echo   Backend setup complete.
+
+echo   Backend: OK
 echo.
 
-:: ---- Step 2: Frontend ----
-echo [2/3] Setting up frontend...
+:: ============================================================
+::  STEP 2: Frontend
+:: ============================================================
+echo [STEP 2/3] Frontend setup
+echo.
 
-if not exist "%FRONTEND_DIR%\package.json" (
-    echo [ERROR] Frontend directory not found:
-    echo   Expected: %FRONTEND_DIR%\package.json
-    echo.
+if not exist "%FRONTEND%\package.json" (
+    echo [ERROR] Cannot find: %FRONTEND%\package.json
     pause
     exit /b 1
 )
 
-pushd "%FRONTEND_DIR%"
+echo   Installing npm packages (may take a few minutes)...
+cd /d "%FRONTEND%"
 call npm install
-set "NPM_RESULT=%errorlevel%"
-popd
-
-if not %NPM_RESULT%==0 (
-    echo [ERROR] npm install failed. Check your internet connection.
+if errorlevel 1 (
+    echo [ERROR] npm install failed. Check internet connection.
     pause
     exit /b 1
 )
-echo   Frontend dependencies installed.
+echo   npm packages installed.
+echo   Frontend: OK
 echo.
 
-:: ---- Step 3: Verify ----
-echo [3/3] Verifying installation...
+:: ============================================================
+::  STEP 3: Verify
+:: ============================================================
+echo [STEP 3/3] Verification
+echo.
 
-set "ALL_OK=1"
+set "OK=1"
 
-if exist "%BACKEND_DIR%\venv\Scripts\python.exe" (
-    echo   [OK] Backend virtual environment
+if exist "%BACKEND%\venv\Scripts\python.exe" (
+    echo   [OK] Backend venv
 ) else (
-    echo   [FAIL] Backend virtual environment
-    set "ALL_OK=0"
+    echo   [FAIL] Backend venv
+    set "OK=0"
 )
 
-if exist "%FRONTEND_DIR%\node_modules" (
+if exist "%FRONTEND%\node_modules\.package-lock.json" (
     echo   [OK] Frontend node_modules
 ) else (
     echo   [FAIL] Frontend node_modules
-    set "ALL_OK=0"
+    set "OK=0"
 )
 
-if exist "%BACKEND_DIR%\.env" (
-    echo   [OK] Backend .env
+if exist "%BACKEND%\.env" (
+    echo   [OK] backend\.env
 ) else (
-    echo   [WARN] Backend .env missing (will use defaults)
+    echo   [WARN] backend\.env missing
 )
 
 echo.
 
-if "%ALL_OK%"=="0" (
-    echo [ERROR] Setup incomplete! Please check errors above.
+if "!OK!"=="0" (
+    echo [FAILED] Setup incomplete. Check errors above.
     pause
     exit /b 1
 )
@@ -194,7 +180,7 @@ if "%ALL_OK%"=="0" (
 echo ========================================
 echo  Setup complete!
 echo.
-echo  Next: Run scripts\start.bat
+echo  Now run: scripts\start.bat
 echo ========================================
 echo.
 
