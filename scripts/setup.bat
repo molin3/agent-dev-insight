@@ -1,114 +1,105 @@
 @echo off
-setlocal
-
-:: ============================================================
-::  AgentDevInsight Setup
-::  Double-click to run. Will NOT close on error.
-:: ============================================================
-
-:: Get project root: scripts\.. = project root
-set "PROJECT=%~dp0.."
-set "BACKEND=%PROJECT%\backend"
-set "FRONTEND=%PROJECT%\frontend"
 
 echo.
 echo ========================================
 echo  AgentDevInsight Setup
 echo ========================================
 echo.
-echo  This script: %~f0
-echo  Project dir: %PROJECT%
-echo  Backend dir: %BACKEND%
-echo  Frontend dir: %FRONTEND%
+
+:: Resolve project root
+set "PROJ=%~dp0.."
+for %%A in ("%PROJ%") do set "PROJ=%%~fA"
+
+set "BK=%PROJ%\backend"
+set "FT=%PROJ%\frontend"
+
+echo  Project: %PROJ%
+echo  Backend: %BK%
+echo  Frontend: %FT%
 echo.
 
 :: ============================================
-:: Check: does backend folder exist?
+:: Check backend folder
 :: ============================================
-if not exist "%BACKEND%\requirements.txt" (
-    echo [ERROR] Backend folder not found!
-    echo.
-    echo   Looking for: %BACKEND%\requirements.txt
-    echo.
-    echo   This usually means you need to enter the INNER folder.
-    echo   If you extracted a ZIP, there might be two folders with
-    echo   the same name nested inside each other.
-    echo.
-    echo   Make sure you run this script from:
-    echo   agent-dev-insight-main\agent-dev-insight-main\scripts\setup.bat
-    echo   (the INNER one, not the outer one)
-    echo.
-    goto :end
-)
+if exist "%BK%\requirements.txt" goto :backend_ok
+echo [ERROR] Backend folder not found!
+echo   Looking for: %BK%\requirements.txt
+echo.
+echo   If using GitHub ZIP, there might be two folders
+echo   with the same name nested inside each other.
+echo   Make sure you are in the INNER folder.
+echo.
+goto :end
+
+:backend_ok
+echo [OK] Backend folder found
 
 :: ============================================
-:: Check: does frontend folder exist?
+:: Check frontend folder
 :: ============================================
-if not exist "%FRONTEND%\package.json" (
-    echo [ERROR] Frontend folder not found!
-    echo   Looking for: %FRONTEND%\package.json
-    goto :end
-)
+if exist "%FT%\package.json" goto :frontend_ok
+echo [ERROR] Frontend folder not found!
+echo   Looking for: %FT%\package.json
+echo.
+goto :end
+
+:frontend_ok
+echo [OK] Frontend folder found
 
 :: ============================================
-:: Check: Python available?
+:: Check Python
 :: ============================================
-python --version >nul 2>&1
-if errorlevel 1 (
-    echo [ERROR] Python is not installed or not in PATH.
-    echo.
-    echo   Download: https://www.python.org/downloads/
-    echo   IMPORTANT: Check "Add Python to PATH" during install.
-    echo.
-    goto :end
-)
+python --version 2>nul
+if not errorlevel 1 goto :python_ok
+echo.
+echo [ERROR] Python not found in PATH.
+echo   Download: https://www.python.org/downloads/
+echo   Check "Add Python to PATH" during install.
+echo.
+goto :end
+
+:python_ok
+echo [OK] Python found
 
 :: ============================================
-:: Check: Node.js available?
+:: Check Node
 :: ============================================
-node --version >nul 2>&1
-if errorlevel 1 (
-    echo [ERROR] Node.js is not installed or not in PATH.
-    echo.
-    echo   Download: https://nodejs.org/
-    echo.
-    goto :end
-)
+node --version 2>nul
+if not errorlevel 1 goto :node_ok
+echo.
+echo [ERROR] Node.js not found in PATH.
+echo   Download: https://nodejs.org/
+echo.
+goto :end
 
-echo [0/3] Prerequisites OK
-python --version
-node --version
-npm --version
+:node_ok
+echo [OK] Node.js found
 echo.
 
 :: ============================================
 :: STEP 1: Backend
 :: ============================================
-echo [1/3] Setting up backend...
+echo [1/3] Backend setup
 echo.
 
-:: Delete incomplete venv if exists
-if exist "%BACKEND%\venv" (
-    if exist "%BACKEND%\venv\Scripts\python.exe" (
-        echo   venv already exists, skipping creation.
-        goto :do_pip
-    )
-    echo   Removing incomplete venv...
-    rmdir /s /q "%BACKEND%\venv"
-)
+:: Remove incomplete venv
+if not exist "%BK%\venv" goto :create_venv
+if exist "%BK%\venv\Scripts\python.exe" goto :venv_ready
+echo   Removing incomplete venv...
+rmdir /s /q "%BK%\venv"
 
-echo   Creating virtual environment (takes ~10 seconds)...
-python -m venv "%BACKEND%\venv"
-if not exist "%BACKEND%\venv\Scripts\python.exe" (
-    echo [ERROR] Failed to create venv.
-    echo   Try running manually: python -m venv venv
+:create_venv
+echo   Creating virtual environment...
+python -m venv "%BK%\venv"
+if not exist "%BK%\venv\Scripts\python.exe" (
+    echo [ERROR] venv creation failed.
     goto :end
 )
 echo   venv created.
 
-:do_pip
-echo   Installing Python packages (takes 1-5 minutes)...
-call "%BACKEND%\venv\Scripts\python.exe" -m pip install --disable-pip-version-check -r "%BACKEND%\requirements.txt"
+:venv_ready
+echo   Installing Python packages (1-5 min)...
+"%BK%\venv\Scripts\python.exe" -m pip install --disable-pip-version-check -q -r "%BK%\requirements.txt"
 if errorlevel 1 (
     echo [ERROR] pip install failed.
     goto :end
@@ -116,26 +107,23 @@ if errorlevel 1 (
 echo   Python packages installed.
 
 :: Copy .env
-if not exist "%BACKEND%\.env" (
-    if exist "%PROJECT%\.env.example" (
-        copy "%PROJECT%\.env.example" "%BACKEND%\.env" >nul
-        echo   Created backend\.env from template.
-    )
-) else (
-    echo   backend\.env already exists.
-)
-
+if exist "%BK%\.env" goto :env_done
+if not exist "%PROJ%\.env.example" goto :env_done
+copy "%PROJ%\.env.example" "%BK%\.env" >nul
+echo   Created backend\.env from template.
+:env_done
 echo   Backend: DONE
 echo.
 
 :: ============================================
 :: STEP 2: Frontend
 :: ============================================
-echo [2/3] Setting up frontend...
+echo [2/3] Frontend setup
 echo.
 
-echo   Installing npm packages (takes 1-5 minutes)...
-call npm install --prefix "%FRONTEND%"
+echo   Installing npm packages (1-5 min)...
+cd /d "%FT%"
+call npm install
 if errorlevel 1 (
     echo [ERROR] npm install failed.
     goto :end
@@ -147,36 +135,25 @@ echo.
 :: ============================================
 :: STEP 3: Verify
 :: ============================================
-echo [3/3] Verifying...
+echo [3/3] Verification
 echo.
 
-if exist "%BACKEND%\venv\Scripts\python.exe" (
-    echo   [OK] Backend venv
-) else (
-    echo   [FAIL] Backend venv
-)
+if exist "%BK%\venv\Scripts\python.exe" echo   [OK] Backend venv
+if not exist "%BK%\venv\Scripts\python.exe" echo   [FAIL] Backend venv
 
-if exist "%FRONTEND%\node_modules" (
-    echo   [OK] Frontend node_modules
-) else (
-    echo   [FAIL] Frontend node_modules
-)
+if exist "%FT%\node_modules" echo   [OK] Frontend node_modules
+if not exist "%FT%\node_modules" echo   [FAIL] Frontend node_modules
 
-if exist "%BACKEND%\.env" (
-    echo   [OK] Backend .env
-) else (
-    echo   [WARN] Backend .env
-)
+if exist "%BK%\.env" echo   [OK] Backend .env
+if not exist "%BK%\.env" echo   [WARN] Backend .env
 
 echo.
 echo ========================================
 echo  Setup complete!
-echo.
-echo  Next: Run scripts\start.bat
+echo  Now run: scripts\start.bat
 echo ========================================
 echo.
 
 :end
-echo.
-echo Press any key to close this window...
+echo Press any key to close...
 pause >nul

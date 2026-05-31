@@ -1,14 +1,4 @@
 @echo off
-setlocal
-
-:: ============================================================
-::  AgentDevInsight Start
-::  Run AFTER setup.bat has completed successfully
-:: ============================================================
-
-set "PROJECT=%~dp0.."
-set "BACKEND=%PROJECT%\backend"
-set "FRONTEND=%PROJECT%\frontend"
 
 echo.
 echo ========================================
@@ -16,30 +6,31 @@ echo  AgentDevInsight Start
 echo ========================================
 echo.
 
+set "PROJ=%~dp0.."
+for %%A in ("%PROJ%") do set "PROJ=%%~fA"
+
+set "BK=%PROJ%\backend"
+set "FT=%PROJ%\frontend"
+
 :: ============================================
 :: Validate
 :: ============================================
-set "READY=1"
+if exist "%BK%\venv\Scripts\python.exe" goto :venv_ok
+echo [ERROR] Backend venv not found.
+echo   Expected: %BK%\venv\Scripts\python.exe
+echo   Solution: Run scripts\setup.bat first.
+echo.
+goto :end
 
-if not exist "%BACKEND%\venv\Scripts\python.exe" (
-    echo [ERROR] Backend venv not found.
-    echo   Expected: %BACKEND%\venv\Scripts\python.exe
-    echo   Solution: Run scripts\setup.bat first.
-    echo.
-    set "READY=0"
-)
+:venv_ok
+if exist "%FT%\node_modules" goto :all_ready
+echo [ERROR] Frontend node_modules not found.
+echo   Expected: %FT%\node_modules
+echo   Solution: Run scripts\setup.bat first.
+echo.
+goto :end
 
-if not exist "%FRONTEND%\node_modules" (
-    echo [ERROR] Frontend node_modules not found.
-    echo   Expected: %FRONTEND%\node_modules
-    echo   Solution: Run scripts\setup.bat first.
-    echo.
-    set "READY=0"
-)
-
-if "%READY%"=="0" (
-    goto :end
-)
+:all_ready
 
 :: ============================================
 :: Start backend
@@ -49,9 +40,9 @@ echo   http://localhost:8000
 echo   http://localhost:8000/docs
 echo.
 
-start "AgentDevInsight Backend" cmd /k "cd /d "%BACKEND%" && "%BACKEND%\venv\Scripts\activate.bat" && uvicorn app.main:app --reload"
+start "AgentDevInsight Backend" cmd /k "cd /d "%BK%" && "%BK%\venv\Scripts\activate.bat" && uvicorn app.main:app --reload"
 
-echo   Waiting for backend to initialize...
+echo   Waiting for backend...
 timeout /t 4 /nobreak >nul
 
 :: ============================================
@@ -61,20 +52,20 @@ echo [2/2] Starting frontend...
 echo   http://localhost:3000
 echo.
 
-start "AgentDevInsight Frontend" cmd /k "cd /d "%FRONTEND%" && npm run dev"
+start "AgentDevInsight Frontend" cmd /k "cd /d "%FT%" && npm run dev"
 
 echo.
 echo ========================================
-echo  Services are starting...
+echo  Services starting...
 echo.
 echo    Frontend:  http://localhost:3000
 echo    Backend:   http://localhost:8000
 echo    API Docs:  http://localhost:8000/docs
 echo.
-echo  Close each service window to stop it
+echo  Close each window to stop
 echo ========================================
 echo.
 
 :end
-echo Press any key to close this window...
+echo Press any key to close...
 pause >nul
