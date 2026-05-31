@@ -1,5 +1,5 @@
 @echo off
-setlocal
+setlocal EnableDelayedExpansion
 
 :: ============================================================
 ::  AgentDevInsight Start Script
@@ -42,8 +42,18 @@ if not exist "%FRONTEND_DIR%\node_modules" (
 )
 
 if "%READY%"=="0" (
-    pause
-    exit /b 1
+    echo.
+    set /p "DO_SETUP=Run setup.bat now? (Y/N): "
+    if /i "!DO_SETUP!"=="Y" (
+        call "%SCRIPT_DIR%setup.bat"
+        if errorlevel 1 exit /b 1
+        echo.
+        echo Setup done, continuing to start services...
+        echo.
+    ) else (
+        pause
+        exit /b 1
+    )
 )
 
 :: ---- Start services ----
