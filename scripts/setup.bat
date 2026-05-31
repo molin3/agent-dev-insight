@@ -8,8 +8,8 @@ setlocal
 
 :: Get project root: scripts\.. = project root
 set "PROJECT=%~dp0.."
-set "BACKEND=%PROJECT%backend"
-set "FRONTEND=%PROJECT%frontend"
+set "BACKEND=%PROJECT%\backend"
+set "FRONTEND=%PROJECT%\frontend"
 
 echo.
 echo ========================================
@@ -117,8 +117,8 @@ echo   Python packages installed.
 
 :: Copy .env
 if not exist "%BACKEND%\.env" (
-    if exist "%PROJECT%.env.example" (
-        copy "%PROJECT%.env.example" "%BACKEND%\.env" >nul
+    if exist "%PROJECT%\.env.example" (
+        copy "%PROJECT%\.env.example" "%BACKEND%\.env" >nul
         echo   Created backend\.env from template.
     )
 ) else (

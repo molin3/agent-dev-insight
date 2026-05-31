@@ -7,8 +7,8 @@ setlocal
 :: ============================================================
 
 set "PROJECT=%~dp0.."
-set "BACKEND=%PROJECT%backend"
-set "FRONTEND=%PROJECT%frontend"
+set "BACKEND=%PROJECT%\backend"
+set "FRONTEND=%PROJECT%\frontend"
 
 echo.
 echo ========================================
