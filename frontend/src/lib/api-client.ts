@@ -36,6 +36,11 @@ export const dashboardApi = {
   overview: () => request<DashboardOverview>("/dashboard/overview"),
 };
 
+// Evaluations API
+export const evaluationsApi = {
+  list: () => request<EvalSummary[]>("/evaluations"),
+};
+
 // Dataset API
 export const datasetApi = {
   list: (params?: Record<string, string>) => {
@@ -77,3 +82,4 @@ import type { TraceDetail, ReplayEvent } from "@/types/trace";
 import type { DashboardOverview } from "@/types/dashboard";
 import type { Dataset, DatasetItem } from "@/types/dataset";
 import type { Experiment, ExperimentRun } from "@/types/experiment";
+import type { EvalSummary } from "@/stores/evaluation-store";

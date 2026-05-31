@@ -16,16 +16,13 @@ class Settings(BaseSettings):
     app_version: str = "0.1.0"
     debug: bool = False
 
-    # 数据库
-    database_url: str = "postgresql+asyncpg://postgres:postgres@localhost:5432/agentdev"
-    database_url_sync: str = "postgresql://postgres:postgres@localhost:5432/agentdev"
+    # 数据库（通过 DATABASE_URL 环境变量配置，默认 SQLite）
+    database_url: str = "sqlite+aiosqlite:///./agentdev.db"
 
     # Redis
     redis_url: str = "redis://localhost:6379/0"
 
     # API
-    api_host: str = "0.0.0.0"
-    api_port: int = 8000
     cors_origins: list[str] = ["http://localhost:3000", "http://localhost:3001"]
 
     # LLM（用于 LLM-as-Judge 评估）
@@ -36,16 +33,8 @@ class Settings(BaseSettings):
     llm_temperature: float = 0.1
     llm_max_tokens: int = 1024
 
-    # SDK 数据采集
-    sdk_ingestion_mode: str = "sync"  # "celery" or "sync"
-    sdk_ingestion_timeout: int = 5
-
-    # 评估
-    eval_max_concurrency: int = 5
-    eval_default_model: str = "gpt-4o"
-
-    # 实验/回归
-    experiment_max_concurrency: int = 10
+    # 数据采集模式：sync（同步）或 celery（异步）
+    sdk_ingestion_mode: str = "sync"
 
 
 settings = Settings()

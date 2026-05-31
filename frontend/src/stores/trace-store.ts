@@ -1,5 +1,6 @@
 import { create } from "zustand";
 import { traceApi } from "@/lib/api-client";
+import { notify } from "@/lib/toast";
 import type { Trace, TraceDetail } from "@/types/trace";
 
 interface TraceState {
@@ -40,6 +41,7 @@ export const useTraceStore = create<TraceState>((set, get) => ({
       set({ traces: result.items, total: result.total, isLoading: false });
     } catch (e) {
       set({ error: (e as Error).message, isLoading: false });
+      notify.error(`Failed to load traces: ${(e as Error).message}`);
     }
   },
 
@@ -50,12 +52,18 @@ export const useTraceStore = create<TraceState>((set, get) => ({
       set({ currentTrace: detail, isLoading: false });
     } catch (e) {
       set({ error: (e as Error).message, isLoading: false });
+      notify.error(`Failed to load trace: ${(e as Error).message}`);
     }
   },
 
   deleteTrace: async (id) => {
-    await traceApi.delete(id);
-    get().fetchTraces();
+    try {
+      await traceApi.delete(id);
+      notify.success("Trace deleted");
+      get().fetchTraces();
+    } catch (e) {
+      notify.error(`Failed to delete: ${(e as Error).message}`);
+    }
   },
 
   setPage: (page) => set({ page }),

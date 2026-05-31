@@ -23,11 +23,3 @@ export function formatCost(c: number): string {
   return `$${c.toFixed(2)}`;
 }
 
-export function statusColor(status: string): string {
-  switch (status) {
-    case "completed": return "text-emerald-600 bg-emerald-50";
-    case "in_progress": return "text-blue-600 bg-blue-50";
-    case "error": return "text-red-600 bg-red-50";
-    default: return "text-gray-600 bg-gray-50";
-  }
-}

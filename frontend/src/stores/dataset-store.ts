@@ -1,5 +1,6 @@
 import { create } from "zustand";
 import { datasetApi } from "@/lib/api-client";
+import { notify } from "@/lib/toast";
 import type { Dataset, DatasetItem } from "@/types/dataset";
 
 interface DatasetState {
@@ -26,8 +27,9 @@ export const useDatasetStore = create<DatasetState>((set, get) => ({
     try {
       const result = await datasetApi.list();
       set({ datasets: result.items, total: result.total, isLoading: false });
-    } catch {
+    } catch (e) {
       set({ isLoading: false });
+      notify.error(`Failed to load datasets: ${(e as Error).message}`);
     }
   },
 
@@ -36,23 +38,39 @@ export const useDatasetStore = create<DatasetState>((set, get) => ({
     try {
       const data = await datasetApi.get(id);
       set({ currentDataset: data, isLoading: false });
-    } catch {
+    } catch (e) {
       set({ isLoading: false });
+      notify.error(`Failed to load dataset: ${(e as Error).message}`);
     }
   },
 
   createDataset: async (name, description) => {
-    await datasetApi.create({ name, description });
-    get().fetchDatasets();
+    try {
+      await datasetApi.create({ name, description });
+      notify.success("Dataset created");
+      get().fetchDatasets();
+    } catch (e) {
+      notify.error(`Failed to create dataset: ${(e as Error).message}`);
+    }
   },
 
   deleteDataset: async (id) => {
-    await datasetApi.delete(id);
-    get().fetchDatasets();
+    try {
+      await datasetApi.delete(id);
+      notify.success("Dataset deleted");
+      get().fetchDatasets();
+    } catch (e) {
+      notify.error(`Failed to delete dataset: ${(e as Error).message}`);
+    }
   },
 
   addItem: async (id, input, expectedOutput) => {
-    await datasetApi.addItem(id, { input, expected_output: expectedOutput });
-    get().fetchDataset(id);
+    try {
+      await datasetApi.addItem(id, { input, expected_output: expectedOutput });
+      notify.success("Item added");
+      get().fetchDataset(id);
+    } catch (e) {
+      notify.error(`Failed to add item: ${(e as Error).message}`);
+    }
   },
 }));

@@ -3,6 +3,7 @@
 import { useEffect } from "react";
 import { useDashboardStore } from "@/stores/dashboard-store";
 import { Activity, CheckCircle2, XCircle, Zap, Coins, Clock } from "lucide-react";
+import { SkeletonCard } from "@/components/ui/skeleton";
 import { formatMs, formatTokens, formatCost } from "@/lib/utils";
 
 function MetricCard({
@@ -39,8 +40,14 @@ export default function DashboardPage() {
 
   if (isLoading || !overview) {
     return (
-      <div className="flex items-center justify-center h-64 text-muted-foreground">
-        Loading...
+      <div>
+        <h2 className="text-2xl font-bold mb-6">Dashboard</h2>
+        <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
+          <SkeletonCard />
+          <SkeletonCard />
+          <SkeletonCard />
+          <SkeletonCard />
+        </div>
       </div>
     );
   }

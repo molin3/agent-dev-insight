@@ -14,7 +14,7 @@ from app.core.database import Base
 # 导入所有模型以触发注册
 from app.models.project import Project  # noqa: F401
 from app.models.trace import Generation, Span, Trace  # noqa: F401
-from app.models.score import EvalConfig, Score  # noqa: F401
+from app.models.score import Score  # noqa: F401
 from app.models.dataset import Dataset, DatasetItem, DatasetRun  # noqa: F401
 from app.models.experiment import (  # noqa: F401
     ComparisonResult,
@@ -23,7 +23,9 @@ from app.models.experiment import (  # noqa: F401
 )
 
 config = context.config
-config.set_main_option("sqlalchemy.url", settings.database_url_sync)
+# 从 async URL 推导 sync URL（Alembic 需要同步驱动）
+sync_url = settings.database_url.replace("+asyncpg", "").replace("+aiosqlite", "")
+config.set_main_option("sqlalchemy.url", sync_url)
 
 if config.config_file_name is not None:
     fileConfig(config.config_file_name)

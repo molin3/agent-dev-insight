@@ -6,14 +6,16 @@ from contextlib import asynccontextmanager
 from fastapi import FastAPI, HTTPException, Request
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import JSONResponse
+from fastapi.exceptions import RequestValidationError
 
-from app.api import datasets, evaluations, experiments, health, scores, traces, ws
+from app.api import auth, datasets, evaluations, experiments, health, scores, traces, ws
 from app.api.public import generations as public_generations
 from app.api.public import scores as public_scores
 from app.api.public import spans as public_spans
 from app.api.public import traces as public_traces
 from app.core.config import settings
 from app.core.database import close_db, init_db
+from app.core.rate_limit import rate_limit_middleware
 from app.core.redis import close_redis, init_redis
 
 logging.basicConfig(
@@ -50,6 +52,9 @@ app.add_middleware(
     allow_headers=["*"],
 )
 
+# 限流中间件
+app.middleware("http")(rate_limit_middleware)
+
 # 统一错误响应格式
 @app.exception_handler(HTTPException)
 async def http_exception_handler(request: Request, exc: HTTPException):
@@ -63,19 +68,40 @@ async def http_exception_handler(request: Request, exc: HTTPException):
     )
 
 
+@app.exception_handler(RequestValidationError)
+async def validation_exception_handler(request: Request, exc: RequestValidationError):
+    errors = exc.errors()
+    messages = []
+    for err in errors:
+        loc = " -> ".join(str(l) for l in err["loc"])
+        messages.append(f"{loc}: {err['msg']}")
+    return JSONResponse(
+        status_code=422,
+        content={
+            "code": 422,
+            "message": "; ".join(messages),
+            "data": None,
+        },
+    )
+
+
 @app.exception_handler(Exception)
 async def general_exception_handler(request: Request, exc: Exception):
     logger.error("Unhandled exception: %s", exc, exc_info=True)
+    message = repr(exc) if settings.debug else "Internal server error"
     return JSONResponse(
         status_code=500,
         content={
             "code": 500,
-            "message": "Internal server error",
+            "message": message,
             "data": None,
         },
     )
 
 app.include_router(health.router, prefix="/api", tags=["健康检查"])
+
+# 认证管理
+app.include_router(auth.router, prefix="/api", tags=["Auth"])
 
 # 公共 API（LangFuse 兼容）
 app.include_router(public_traces.router, prefix="/api/public", tags=["Public API"])

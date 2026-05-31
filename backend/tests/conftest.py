@@ -28,9 +28,10 @@ def event_loop():
 @pytest_asyncio.fixture(scope="function")
 async def db_session() -> AsyncGenerator[AsyncSession, None]:
     # 导入所有模型确保 SQLAlchemy 识别表关系
+    from app.models.api_key import APIKey  # noqa: F401
     from app.models.project import Project  # noqa: F401
     from app.models.trace import Generation, Span, Trace  # noqa: F401
-    from app.models.score import EvalConfig, Score  # noqa: F401
+    from app.models.score import Score  # noqa: F401
     from app.models.dataset import Dataset, DatasetItem, DatasetRun  # noqa: F401
     from app.models.experiment import (  # noqa: F401
         ComparisonResult,

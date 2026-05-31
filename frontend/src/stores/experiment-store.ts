@@ -1,5 +1,6 @@
 import { create } from "zustand";
 import { experimentApi } from "@/lib/api-client";
+import { notify } from "@/lib/toast";
 import type { Experiment, ExperimentRun } from "@/types/experiment";
 
 interface ExperimentState {
@@ -26,8 +27,9 @@ export const useExperimentStore = create<ExperimentState>((set, get) => ({
     try {
       const result = await experimentApi.list();
       set({ experiments: result.items, total: result.total, isLoading: false });
-    } catch {
+    } catch (e) {
       set({ isLoading: false });
+      notify.error(`Failed to load experiments: ${(e as Error).message}`);
     }
   },
 
@@ -36,23 +38,39 @@ export const useExperimentStore = create<ExperimentState>((set, get) => ({
     try {
       const data = await experimentApi.get(id);
       set({ currentExperiment: data, isLoading: false });
-    } catch {
+    } catch (e) {
       set({ isLoading: false });
+      notify.error(`Failed to load experiment: ${(e as Error).message}`);
     }
   },
 
   createExperiment: async (name, taskDescription, description) => {
-    await experimentApi.create({ name, task_description: taskDescription, description });
-    get().fetchExperiments();
+    try {
+      await experimentApi.create({ name, task_description: taskDescription, description });
+      notify.success("Experiment created");
+      get().fetchExperiments();
+    } catch (e) {
+      notify.error(`Failed to create experiment: ${(e as Error).message}`);
+    }
   },
 
   runExperiment: async (id) => {
-    await experimentApi.run(id);
-    get().fetchExperiments();
+    try {
+      await experimentApi.run(id);
+      notify.success("Experiment started");
+      get().fetchExperiments();
+    } catch (e) {
+      notify.error(`Failed to run experiment: ${(e as Error).message}`);
+    }
   },
 
   deleteExperiment: async (id) => {
-    await experimentApi.delete(id);
-    get().fetchExperiments();
+    try {
+      await experimentApi.delete(id);
+      notify.success("Experiment deleted");
+      get().fetchExperiments();
+    } catch (e) {
+      notify.error(`Failed to delete experiment: ${(e as Error).message}`);
+    }
   },
 }));

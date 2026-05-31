@@ -54,6 +54,27 @@ class DatasetService:
         await self.db.refresh(item)
         return item
 
+    async def add_items_bulk(
+        self,
+        dataset_id: str,
+        items: list[dict],
+    ) -> int:
+        """批量添加数据集条目，返回成功创建的数量"""
+        count = 0
+        for item_data in items:
+            item = DatasetItem(
+                id=gen_uuid(),
+                dataset_id=dataset_id,
+                input=item_data.get("input", {}),
+                expected_output=item_data.get("expected_output"),
+                eval_criteria=item_data.get("eval_criteria"),
+                source_trace_id=item_data.get("source_trace_id"),
+            )
+            self.db.add(item)
+            count += 1
+        await self.db.commit()
+        return count
+
     async def create_item_from_trace(self, dataset_id: str, trace_id: str) -> DatasetItem | None:
         from app.services.trace_service import TraceService
 
@@ -75,13 +96,45 @@ class DatasetService:
             source_trace_id=trace_id,
         )
 
-    async def get_items(self, dataset_id: str) -> list[DatasetItem]:
-        result = await self.db.execute(
+    async def get_items(self, dataset_id: str, page: int = 1, page_size: int = 50) -> dict:
+        query = (
             select(DatasetItem)
             .where(DatasetItem.dataset_id == dataset_id)
             .order_by(DatasetItem.created_at)
         )
-        return list(result.scalars().all())
+        count_query = (
+            select(func.count())
+            .select_from(DatasetItem)
+            .where(DatasetItem.dataset_id == dataset_id)
+        )
+        total = (await self.db.execute(count_query)).scalar() or 0
+        items = (
+            await self.db.execute(query.offset((page - 1) * page_size).limit(page_size))
+        ).scalars().all()
+        return {"total": total, "page": page, "page_size": page_size, "items": items}
+
+    async def update_dataset(self, dataset_id: str, **kwargs) -> Dataset | None:
+        dataset = await self.get_dataset(dataset_id)
+        if dataset is None:
+            return None
+        for key, value in kwargs.items():
+            if key in ("name", "description") and value is not None:
+                setattr(dataset, key, value)
+        await self.db.commit()
+        await self.db.refresh(dataset)
+        return dataset
+
+    async def delete_item(self, dataset_id: str, item_id: str) -> bool:
+        result = await self.db.execute(
+            select(DatasetItem)
+            .where(DatasetItem.id == item_id, DatasetItem.dataset_id == dataset_id)
+        )
+        item = result.scalar_one_or_none()
+        if item is None:
+            return False
+        await self.db.delete(item)
+        await self.db.commit()
+        return True
 
     async def delete_dataset(self, dataset_id: str) -> bool:
         dataset = await self.get_dataset(dataset_id)

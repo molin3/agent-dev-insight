@@ -1,4 +1,5 @@
 import type { Metadata } from "next";
+import { Toaster } from "sonner";
 import { AppSidebar } from "@/components/layout/app-sidebar";
 import "./globals.css";
 
@@ -15,6 +16,7 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
           <AppSidebar />
           <main className="flex-1 p-6 overflow-auto">{children}</main>
         </div>
+        <Toaster position="top-right" richColors closeButton />
       </body>
     </html>
   );

@@ -1,6 +1,10 @@
-"""AgentDevInsight Python SDK"""
+"""AgentDevInsight Python SDK — send trace data to the AgentDevInsight platform."""
 
-from .client import AgentDevInsight
-from .decorator import span, trace
+from .client import AgentDevInsightClient, get_client
+from .decorators import trace
 
-__all__ = ["AgentDevInsight", "trace", "span"]
+__all__ = [
+    "AgentDevInsightClient",
+    "get_client",
+    "trace",
+]

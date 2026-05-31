@@ -2,15 +2,46 @@ __pycache__/
 *.py[cod]
 *.egg-info/
 dist/
+build/
+*.egg
+
+# 环境变量和敏感文件
 .env
 *.db
+
+# Python 虚拟环境
 .venv/
 venv/
+
+# 前端
 node_modules/
 .next/
+
+# 测试和覆盖率
 .coverage
 htmlcov/
 .pytest_cache/
+
+# 日志
 *.log
+
+# 数据和存储
 data/
 storage/
+
+# IDE 配置
+.idea/
+.vscode/
+*.swp
+*.swo
+
+# 操作系统
+.DS_Store
+Thumbs.db
+
+# 打包产物
+*.exe
+*.msi
+
+# 个人文档
+*.docx

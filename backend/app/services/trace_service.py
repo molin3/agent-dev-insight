@@ -108,12 +108,17 @@ class TraceService:
             "items": items,
         }
 
+    ALLOWED_UPDATE_FIELDS = {
+        "name", "user_id", "tags", "extra_metadata", "release", "version",
+        "status", "error_message",
+    }
+
     async def update_trace(self, trace_id: str, **kwargs) -> Trace | None:
         trace = await self.get_trace(trace_id)
         if trace is None:
             return None
         for key, value in kwargs.items():
-            if hasattr(trace, key) and value is not None:
+            if key in self.ALLOWED_UPDATE_FIELDS and value is not None:
                 setattr(trace, key, value)
         await self.db.commit()
         await self.db.refresh(trace)
@@ -187,6 +192,7 @@ class TraceService:
         # 如果提供了 output，说明 span 已经执行完毕，自动标记为 completed
         has_output = output is not None and len(output) > 0
         now = datetime.utcnow()
+        started = started_at or now
         span = Span(
             id=span_id or gen_uuid(),
             trace_id=trace_id,
@@ -198,9 +204,9 @@ class TraceService:
             output=output,
             extra_metadata=metadata,
             status="completed" if has_output else "in_progress",
-            started_at=started_at or now,
+            started_at=started,
             ended_at=now if has_output else None,
-            latency_ms=None,
+            latency_ms=(now - started).total_seconds() * 1000 if has_output else None,
             level=level,
         )
         self.db.add(span)

@@ -2,9 +2,13 @@
 
 from fastapi import APIRouter, Depends, HTTPException
 from pydantic import BaseModel
+from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
+from sqlalchemy.orm import joinedload
 
 from app.core.database import get_db
+from app.models.score import Score
+from app.models.trace import Trace
 from app.services.evaluation_service import BUILTIN_EVALUATORS, EvaluationService
 
 router = APIRouter()
@@ -47,34 +51,55 @@ async def list_evaluators(db: AsyncSession = Depends(get_db)):
     }
 
 
+@router.get("/evaluations")
+async def list_evaluations(db: AsyncSession = Depends(get_db)):
+    """Batch endpoint: return all completed traces with their scores."""
+    stmt = (
+        select(Trace)
+        .where(Trace.status == "completed")
+        .options(joinedload(Trace.scores))
+        .order_by(Trace.started_at.desc())
+    )
+    result = await db.execute(stmt)
+    traces = result.unique().scalars().all()
+
+    data = [
+        {
+            "trace_id": t.id,
+            "trace_name": t.name,
+            "status": t.status,
+            "scores": [{"name": s.name, "value": s.value} for s in t.scores],
+        }
+        for t in traces
+    ]
+    return {"code": 200, "message": "success", "data": data}
+
+
 @router.get("/dashboard/overview")
 async def dashboard_overview(db: AsyncSession = Depends(get_db)):
-    from app.services.trace_service import TraceService
+    from sqlalchemy import func, case
 
-    trace_service = TraceService(db)
-    result = await trace_service.get_traces(page=1, page_size=1000)
-    traces = result["items"]
-
-    total_traces = result["total"]
-    completed = sum(1 for t in traces if t.status == "completed")
-    errors = sum(1 for t in traces if t.status == "error")
-    total_tokens = sum(t.total_tokens or 0 for t in traces)
-    total_cost = sum(t.total_cost or 0 for t in traces)
-    avg_latency = (
-        sum(t.total_latency_ms or 0 for t in traces) / len(traces)
-        if traces
-        else 0
+    # SQL 聚合：一次查询完成所有统计
+    stmt = select(
+        func.count().label("total_traces"),
+        func.sum(case((Trace.status == "completed", 1), else_=0)).label("completed"),
+        func.sum(case((Trace.status == "error", 1), else_=0)).label("errors"),
+        func.coalesce(func.sum(Trace.total_tokens), 0).label("total_tokens"),
+        func.coalesce(func.sum(Trace.total_cost), 0).label("total_cost"),
+        func.coalesce(func.avg(Trace.total_latency_ms), 0).label("avg_latency_ms"),
     )
+    result = await db.execute(stmt)
+    row = result.one()
 
     return {
         "code": 200,
         "message": "success",
         "data": {
-            "total_traces": total_traces,
-            "completed": completed,
-            "errors": errors,
-            "total_tokens": total_tokens,
-            "total_cost": round(total_cost, 6),
-            "avg_latency_ms": round(avg_latency, 2),
+            "total_traces": row.total_traces or 0,
+            "completed": row.completed or 0,
+            "errors": row.errors or 0,
+            "total_tokens": row.total_tokens or 0,
+            "total_cost": round(row.total_cost or 0, 6),
+            "avg_latency_ms": round(row.avg_latency_ms or 0, 2),
         },
     }

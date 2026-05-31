@@ -10,6 +10,7 @@ from app.evaluators.builtin import hallucination  # noqa: F401
 from app.evaluators.builtin import latency  # noqa: F401
 from app.evaluators.builtin import token_cost  # noqa: F401
 from app.evaluators.builtin import tool_accuracy  # noqa: F401
+from app.evaluators.builtin import llm_quality  # noqa: F401
 from app.evaluators.registry import EvaluatorRegistry
 from app.models.score import Score
 from app.services.trace_service import TraceService
@@ -22,6 +23,7 @@ BUILTIN_EVALUATORS = [
     "latency",
     "token_cost",
     "hallucination",
+    "llm_quality",
 ]
 
 

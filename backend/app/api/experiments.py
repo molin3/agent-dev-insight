@@ -15,6 +15,12 @@ class ExperimentCreate(BaseModel):
     description: str | None = None
     task_description: str = Field(..., min_length=1)
     dataset_id: str | None = None
+    model_names: list[str] | None = None
+
+
+class ExperimentUpdate(BaseModel):
+    name: str | None = Field(None, min_length=1, max_length=200)
+    description: str | None = None
 
 
 @router.post("/experiments", status_code=201)
@@ -30,7 +36,7 @@ async def create_experiment(
         dataset_id=request.dataset_id,
     )
     # 自动执行实验
-    exp = await service.run_experiment(exp.id)
+    exp = await service.run_experiment(exp.id, model_names=request.model_names)
     return {"code": 201, "message": "Experiment created and running", "data": exp.to_dict() if exp else {}}
 
 
@@ -63,10 +69,19 @@ async def get_experiment(experiment_id: str, db: AsyncSession = Depends(get_db))
     }
 
 
+class ExperimentRunRequest(BaseModel):
+    model_names: list[str] | None = None
+
+
 @router.post("/experiments/{experiment_id}/run")
-async def run_experiment(experiment_id: str, db: AsyncSession = Depends(get_db)):
+async def run_experiment(
+    experiment_id: str,
+    request: ExperimentRunRequest | None = None,
+    db: AsyncSession = Depends(get_db),
+):
     service = ExperimentService(db)
-    exp = await service.run_experiment(experiment_id)
+    model_names = request.model_names if request else None
+    exp = await service.run_experiment(experiment_id, model_names=model_names)
     if exp is None:
         raise HTTPException(status_code=404, detail="Experiment not found")
     return {
@@ -74,6 +89,21 @@ async def run_experiment(experiment_id: str, db: AsyncSession = Depends(get_db))
         "message": f"Experiment {exp.status}",
         "data": exp.to_dict(),
     }
+
+
+@router.patch("/experiments/{experiment_id}")
+async def update_experiment(
+    experiment_id: str,
+    request: ExperimentUpdate,
+    db: AsyncSession = Depends(get_db),
+):
+    service = ExperimentService(db)
+    exp = await service.update_experiment(
+        experiment_id, name=request.name, description=request.description
+    )
+    if exp is None:
+        raise HTTPException(status_code=404, detail="Experiment not found")
+    return {"code": 200, "message": "Experiment updated", "data": exp.to_dict()}
 
 
 @router.delete("/experiments/{experiment_id}")

@@ -4,6 +4,7 @@ import { useEffect, useState } from "react";
 import Link from "next/link";
 import { useTraceStore } from "@/stores/trace-store";
 import { Badge } from "@/components/ui/badge";
+import { SkeletonTable } from "@/components/ui/skeleton";
 import { formatMs, formatTokens, formatCost } from "@/lib/utils";
 import { Search } from "lucide-react";
 
@@ -58,7 +59,7 @@ export default function TracesPage() {
       </div>
 
       {isLoading ? (
-        <p className="text-muted-foreground">Loading...</p>
+        <SkeletonTable />
       ) : (
         <>
           <div className="border border-border rounded-lg overflow-hidden">

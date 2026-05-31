@@ -128,10 +128,18 @@ async def complete_trace(
     trace_id: str,
     db: AsyncSession = Depends(get_db),
 ):
+    from app.core.config import settings
+
     service = TraceService(db)
     trace = await service.complete_trace(trace_id)
     if trace is None:
         raise HTTPException(status_code=404, detail="Trace not found")
+
+    # Celery 模式下异步触发评估
+    if settings.sdk_ingestion_mode == "celery":
+        from app.tasks.trace_tasks import finalize_trace
+        finalize_trace.delay(trace_id)
+
     return {"code": 200, "message": "Trace completed", "data": trace.to_dict()}
 
 

@@ -37,9 +37,10 @@ async def get_db() -> AsyncGenerator[AsyncSession, None]:
 
 async def init_db() -> None:
     async with engine.begin() as conn:
+        from app.models.api_key import APIKey  # noqa: F401
         from app.models.project import Project  # noqa: F401
         from app.models.trace import Generation, Span, Trace  # noqa: F401
-        from app.models.score import EvalConfig, Score  # noqa: F401
+        from app.models.score import Score  # noqa: F401
         from app.models.dataset import Dataset, DatasetItem, DatasetRun  # noqa: F401
         from app.models.experiment import (  # noqa: F401
             ComparisonResult,

@@ -26,10 +26,3 @@ class Score(BaseModel):
     span = relationship("Span")
 
 
-class EvalConfig(BaseModel):
-    __tablename__ = "eval_configs"
-
-    name: Mapped[str] = mapped_column(String(100), nullable=False)
-    prompt_template: Mapped[str] = mapped_column(String(5000), nullable=False)
-    target: Mapped[str] = mapped_column(String(10), nullable=False, default="trace")
-    model: Mapped[str] = mapped_column(String(100), nullable=False)
