@@ -1,60 +1,71 @@
 @echo off
 setlocal
 
-:: Resolve project root directory
-set "PROJECT_DIR=%~dp0.."
+:: ============================================================
+::  AgentDevInsight Start Script
+::  Usage: Double-click scripts\start.bat (after setup.bat)
+:: ============================================================
+
+:: Resolve absolute paths
+set "SCRIPT_DIR=%~dp0"
+set "PROJECT_DIR=%SCRIPT_DIR%.."
+set "BACKEND_DIR=%PROJECT_DIR%\backend"
+set "FRONTEND_DIR=%PROJECT_DIR%\frontend"
 
 echo ========================================
 echo  AgentDevInsight Starting...
 echo ========================================
 echo.
 
-:: Check venv exists
-if not exist "%PROJECT_DIR%\backend\venv\Scripts\python.exe" (
-    echo [ERROR] Backend virtual environment not found.
+:: ---- Validate environment ----
+set "READY=1"
+
+if not exist "%BACKEND_DIR%\venv\Scripts\python.exe" (
+    echo [ERROR] Backend venv not found or incomplete.
     echo.
-    echo  The venv directory exists but is incomplete, or setup.bat
-    echo  was never run. Please run scripts\setup.bat first.
+    echo  Expected: %BACKEND_DIR%\venv\Scripts\python.exe
     echo.
-    echo  If setup.bat already ran, try:
-    echo    1. Delete the folder: %PROJECT_DIR%\backend\venv
-    echo    2. Run scripts\setup.bat again
+    echo  Please run scripts\setup.bat first.
+    echo  If setup already ran, delete the venv folder and retry.
     echo.
-    pause
-    exit /b 1
+    set "READY=0"
 )
 
-:: Check node_modules exists
-if not exist "%PROJECT_DIR%\frontend\node_modules" (
-    echo [ERROR] Frontend dependencies not found.
+if not exist "%FRONTEND_DIR%\node_modules" (
+    echo [ERROR] Frontend node_modules not found.
+    echo.
+    echo  Expected: %FRONTEND_DIR%\node_modules
     echo.
     echo  Please run scripts\setup.bat first.
     echo.
+    set "READY=0"
+)
+
+if "%READY%"=="0" (
     pause
     exit /b 1
 )
 
-:: Start backend in new window
-echo [1/2] Starting backend (http://localhost:8000)...
-start "AgentDevInsight Backend" cmd /k "cd /d "%PROJECT_DIR%\backend" && call venv\Scripts\activate.bat && uvicorn app.main:app --reload"
+:: ---- Start services ----
 
-:: Wait for backend to start
-echo   Waiting for backend to initialize...
+echo [1/2] Starting backend (http://localhost:8000)...
+start "AgentDevInsight Backend" cmd /k "cd /d "%BACKEND_DIR%" && "%BACKEND_DIR%\venv\Scripts\activate.bat" && uvicorn app.main:app --reload"
+
+echo   Waiting for backend...
 timeout /t 4 /nobreak >nul
 
-:: Start frontend in new window
 echo [2/2] Starting frontend (http://localhost:3000)...
-start "AgentDevInsight Frontend" cmd /k "cd /d "%PROJECT_DIR%\frontend" && npm run dev"
+start "AgentDevInsight Frontend" cmd /k "cd /d "%FRONTEND_DIR%" && npm run dev"
 
 echo.
 echo ========================================
 echo  Services are starting...
 echo.
-echo  Frontend:  http://localhost:3000
-echo  Backend:   http://localhost:8000
-echo  API Docs:  http://localhost:8000/docs
+echo    Frontend:  http://localhost:3000
+echo    Backend:   http://localhost:8000
+echo    API Docs:  http://localhost:8000/docs
 echo.
-echo  Close the service windows to stop them
+echo  Close the service windows to stop
 echo ========================================
 echo.
 
